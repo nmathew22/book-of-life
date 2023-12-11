@@ -175,6 +175,57 @@ def handle_form_submission(input_object):
     }
 
     st.session_state.result_answers = output_object
+
+    # HTML('<h1>foo') would be filename
+    html_content = f'''
+    <!DOCTYPE html>
+    <html>
+        <head>
+        </head>
+        <body>
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+                <h1>{output_object['month_day']}, {output_object['current_year']}</h1>
+                <div style="
+    width: 50px; 
+    height: 50px; 
+    border: 2px solid black; 
+    background-color: blue; 
+    color: white; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    flex-direction: column;
+    text-align: center;
+">
+    <h3 style="margin: 0;">{output_object['day_rating']}</h3>
+</div>
+</div>
+            <p><b>Day:</b></p>
+            <p>{output_object['day_summarization']}</p>
+            <p><b>Completed Tasks:</b></p>
+            <p>{output_object['list_tasks']}</p>
+            <p><b>Quote of the Day:</b></p>
+            <p>{output_object['quote_of_the_day']}</p>
+            <p><b>Fun Fact:</b></p>
+            <p>{output_object['fun_fact']}</p>
+            <p><b>Tomorrow:</b></p>
+            <p>{output_object['final_goals']}</p>
+        </body>
+    </html>      
+    '''
+
+    html = HTML(string=html_content)
+
+    # Write HTML content to a file
+    with open('output.html', 'w') as file:
+        file.write(html_content)
+
+    css = CSS(filename='css/main.css')
+
+    html.write_pdf(
+        'journal.pdf', stylesheets=[css])
+
     st.session_state.page = 'result'
 
 
@@ -186,7 +237,8 @@ if st.session_state.page == 'welcome':
     # Use the first column to display content
     with col1:
         st.title("Book of Life")
-        st.write('Welcome to Book of Life, an app which uses the power of generative AI to help you craft high-quality journal entries in seconds.')
+        st.write(
+            'Welcome to Book of Life. Use the power of generative AI to craft high-quality journal entries in seconds.')
         st.button('Start', on_click=go_to_form)
 
     # Use the second column to display content
@@ -246,16 +298,6 @@ elif st.session_state.page == 'form':
             print("from: \n")
             print(input_object)
 
-            # HTML('<h1>foo') would be filename
-            html = HTML(string='''
-                <h1>The title</h1>
-                <p>Content goes here
-            ''')
-            css = CSS(string='@page { size: A3; margin: 1cm }')
-
-            html.write_pdf(
-                'example.pdf', stylesheets=[css])
-
             handle_form_submission(input_object)
             st.success("Journal page generated. Click Submit to view.")
 
@@ -266,14 +308,13 @@ elif st.session_state.page == 'form':
 elif st.session_state.page == 'result':
     st.title("Enjoy!")
     st.write('Your personalized journal entry is available for download below.')
-    with open("example.pdf", "rb") as file:
+
+    with open("journal.pdf", "rb") as file:
         st.download_button(
-            label="Download Journal Entry",
+            label="Download Entry",
             data=file,
             file_name="journal_entry.pdf",
-            mime="application/octet-stream",
-            type="secondary"
+            mime="application/octet-stream"
         )
-    if st.session_state.result_answers:
-        st.write(st.session_state.result_answers)
+
     st.button("Back", on_click=go_to_form)
