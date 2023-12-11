@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+</head>
+
+<body
+    style="padding: 0.25in; background-color: #FFFBEF; border: 5px solid #6e4222; border-radius: 2px; font-family: 'Trebuchet MS';">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 45px">
+        <div>
+            <h1 style="margin-bottom: 0.25em;">{{ date }}</h1>
+            <i>{{ name }}'s Journal</i>
+        </div>
+        <div style="
+width: 50px; 
+height: 50px; 
+border: 2px solid gray; 
+margin: 0.125in;
+background-color: #09588A; 
+color: white; 
+border-radius: 50%; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+flex-direction: column;
+text-align: center;
+">
+            <h3 style="margin: 0;">{{ rating }}</h3>
+        </div>
+    </div>
+    <div><b>Reflection:</b></div>
+    <div>
+        {{ reflection }}</div>
+    <div style="margin-top: 30px"><b>Completed Tasks:</b></div>
+    <div>
+        {{ completed_tasks }}</div>
+    <div style="margin-top: 30px"><b>Quote of the Day:</b></div>
+    <div>
+        {{ quote_of_the_day }}</div>
+    <div style="margin-top: 30px"><b>Fun Fact:</b></div>
+    <div>
+        {{ fun_fact }}
+    </div>
+    <div style="margin-top: 30px"><b>Tomorrow:</b>
+    </div>
+    <div>
+        {{ tomorrow_goals }}
+    </div>
+</body>
+
+</html>

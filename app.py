@@ -175,57 +175,6 @@ def handle_form_submission(input_object):
     }
 
     st.session_state.result_answers = output_object
-
-    # HTML('<h1>foo') would be filename
-    html_content = f'''
-    <!DOCTYPE html>
-    <html>
-        <head>
-        </head>
-        <body>
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-                <h1>{output_object['month_day']}, {output_object['current_year']}</h1>
-                <div style="
-    width: 50px; 
-    height: 50px; 
-    border: 2px solid black; 
-    background-color: blue; 
-    color: white; 
-    border-radius: 50%; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    flex-direction: column;
-    text-align: center;
-">
-    <h3 style="margin: 0;">{output_object['day_rating']}</h3>
-</div>
-</div>
-            <p><b>Day:</b></p>
-            <p>{output_object['day_summarization']}</p>
-            <p><b>Completed Tasks:</b></p>
-            <p>{output_object['list_tasks']}</p>
-            <p><b>Quote of the Day:</b></p>
-            <p>{output_object['quote_of_the_day']}</p>
-            <p><b>Fun Fact:</b></p>
-            <p>{output_object['fun_fact']}</p>
-            <p><b>Tomorrow:</b></p>
-            <p>{output_object['final_goals']}</p>
-        </body>
-    </html>      
-    '''
-
-    html = HTML(string=html_content)
-
-    # Write HTML content to a file
-    with open('output.html', 'w') as file:
-        file.write(html_content)
-
-    css = CSS(filename='css/main.css')
-
-    html.write_pdf(
-        'journal.pdf', stylesheets=[css])
-
     st.session_state.page = 'result'
 
 
@@ -308,6 +257,25 @@ elif st.session_state.page == 'form':
 elif st.session_state.page == 'result':
     st.title("Enjoy!")
     st.write('Your personalized journal entry is available for download below.')
+
+    # Read HTML file
+    with open('template.html', 'r') as file:
+        html_content = file.read()
+
+    # Replace placeholders with actual values
+    html_content = html_content.replace('{{ date }}', str(st.session_state.result_answers['month_day']) + ", " + str(st.session_state.result_answers['current_year'])).replace('{{ name }}', str(st.session_state.result_answers['name'])).replace('{{ rating }}', str(st.session_state.result_answers['day_rating'])).replace(
+        '{{ reflection }}', str(st.session_state.result_answers['day_summarization'])).replace('{{ completed_tasks }}', str(st.session_state.result_answers['list_tasks'])).replace('{{ quote_of_the_day }}', str(st.session_state.result_answers['quote_of_the_day'])).replace('{{ fun_fact }}', str(st.session_state.result_answers['fun_fact'])).replace('{{ tomorrow_goals }}', str(st.session_state.result_answers['final_goals']))
+
+    # Render HTML with CSS in Streamlit
+    st.components.v1.html(html_content, height=600, scrolling=True)
+
+    html = HTML(string=html_content)
+
+    # Write HTML content to a file
+    with open('output.html', 'w') as file:
+        file.write(html_content)
+
+    html.write_pdf('journal.pdf')
 
     with open("journal.pdf", "rb") as file:
         st.download_button(
