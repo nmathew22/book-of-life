@@ -4,8 +4,7 @@
 <head>
 </head>
 
-<body
-    style="padding: 0.25in; background-color: #FFFBEF; border: 5px solid #6e4222; border-radius: 2px; font-family: 'Trebuchet MS';">
+<body style="padding: 0.25in; background-color: #FFFBEF; font-family: 'Trebuchet MS';">
     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 45px">
         <div>
             <h1 style="margin-bottom: 0.25em;">{{ date }}</h1>
@@ -33,13 +32,24 @@ text-align: center;
         {{ reflection }}</div>
     <div style="margin-top: 30px"><b>Completed Tasks:</b></div>
     <div>
-        {{ completed_tasks }}</div>
-    <div style="margin-top: 30px"><b>Quote of the Day:</b></div>
-    <div>
-        {{ quote_of_the_day }}</div>
-    <div style="margin-top: 30px"><b>Fun Fact:</b></div>
-    <div>
-        {{ fun_fact }}
+        <ul style="margin-top: 5px">
+            {{ completed_tasks }}
+        </ul>
+    </div>
+    <div style="margin-top: 30px; display: flex; justify-content: start; gap: 20px;">
+        <div>
+            <div><b>Quote of the Day:</b></div>
+            <div>
+                {{ quote_of_the_day }}</div>
+
+        </div>
+        <div>
+            <div><b>Fun Fact:</b></div>
+            <div>
+                {{ fun_fact }}
+            </div>
+        </div>
+
     </div>
     <div style="margin-top: 30px"><b>Tomorrow:</b>
     </div>

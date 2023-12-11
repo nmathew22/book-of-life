@@ -4,8 +4,11 @@ from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain, SequentialChain
+from langchain.document_loaders import ImageCaptionLoader
+from langchain.indexes import VectorstoreIndexCreator
 from weasyprint import HTML, CSS
 from datetime import datetime
+from PIL import Image
 import credentials
 import os
 import openai
@@ -55,16 +58,6 @@ def handle_form_submission(input_object):
     llm = OpenAI(temperature=0.7)
     quote_of_the_day = llm(quote_final_prompt)
 
-    print(" - - - - - ")
-    print(input_object)
-    print(quote_prompt)
-    print(input_object['day_description'])
-    print(quote_final_prompt)
-    print(quote_of_the_day)
-
-    # print(textwrap.fill(quote_of_the_day, 75))
-    # st.write(quote_of_the_day)
-
     summarization_prompt = """
     Summarize the day that is described below in about 150 words (a paragraph). Write in the point of view
     (either first person or second person) indicated below. Include a comment about the kind of day it was:
@@ -84,30 +77,25 @@ def handle_form_submission(input_object):
     llm = OpenAI(temperature=0.7)
     day_summarization = llm(summarization_final_prompt)
 
-    # print(textwrap.fill(day_summarization, 75))
-    # st.write(day_summarization)
-
     tasks_prompt = """
-    Give me an array where every element of the array is a task that is included in the
-    description below. If the task list is empty, don't output anything. The tasks should 
-    be relatively short. Each task should start with a verb in the past tense, to indicate 
-    that the task was completed.
-    Tasks: {user_tasks}
+    Extract what tasks the user completed based on the description of his day below. The tasks should be 
+    career/academic oriented and related to work in some sense. For example, going to dinner would not be 
+    a task you should include. If the task list is empty, don't output anything. The tasks should be relatively 
+    short. Each task should start with a verb in the past tense, to indicate that the task was completed.
+    Day: {day_description}
     """
 
     tasks_template = PromptTemplate(
         template=tasks_prompt,
-        input_variables=["user_tasks"],
+        input_variables=["day_description"],
     )
 
     tasks_final_prompt = tasks_template.format(
-        user_tasks=input_object['user_tasks'])
+        day_description=input_object['day_description'])
 
     llm = OpenAI(temperature=0.4)
     list_tasks = llm(tasks_final_prompt)
-
-    # print(textwrap.fill(list_tasks, 75))
-    # st.write(list_tasks)
+    list_tasks = list_tasks.split(", ")
 
     user_learning_prompt = """
     Give an interesting fact from the topic below that the user wants to learn about. 
@@ -124,9 +112,6 @@ def handle_form_submission(input_object):
 
     llm = OpenAI(temperature=0.4)
     fun_fact = llm(user_learning_final_prompt)
-
-    # print(textwrap.fill(fun_fact, 75))
-    # st.write(fun_fact)
 
     goals_prompt = """
     Reword the goals below in a sentence in the point of view listed below. Be encouraging.
@@ -146,21 +131,6 @@ def handle_form_submission(input_object):
     llm = OpenAI(temperature=0.4)
     final_goals = llm(goals_final_prompt)
 
-    # print(textwrap.fill(final_goals, 75))
-    # st.write(final_goals)
-
-    if input_object['uploaded_files'] is None:
-        st.write("No images uploaded.")
-    elif len(input_object['uploaded_files']) < 4:
-        for uploaded_file in input_object['uploaded_files']:
-            # To read file as bytes:
-            bytes_data = uploaded_file.getvalue()
-
-            # Display the image
-            st.image(bytes_data)
-    else:
-        st.write("Uploaded more than 3 images.")
-
     output_object = {
         'name': input_object['name'],
         'month_day': input_object['month_day'],
@@ -171,7 +141,7 @@ def handle_form_submission(input_object):
         'quote_of_the_day': quote_of_the_day,
         'fun_fact': fun_fact,
         'final_goals': final_goals,
-        'uploaded_files': input_object['uploaded_files'],
+        # 'uploaded_files': input_object['uploaded_files'],
     }
 
     st.session_state.result_answers = output_object
@@ -208,12 +178,10 @@ elif st.session_state.page == 'form':
         pov = st.radio(
             "What point of view do you want your day summary to have?",
             ["First Person", "Second Person"])
-        user_tasks = st.text_input(
-            "What tasks did you complete?")
         user_learning = st.text_input(
             "What's something new you want to learn about?")
-        uploaded_files = st.file_uploader("Upload images from your day. (Max: 3)", type=[
-            'jpg', 'png'], accept_multiple_files=True)
+        # uploaded_files = st.file_uploader("Upload an important image from your day.", type=[
+        #     'jpg', 'png'])
         rating = st.slider(
             "How would you rate this day?", 0, 10, 1)
         goals = st.text_input(
@@ -222,33 +190,35 @@ elif st.session_state.page == 'form':
         submitted = st.form_submit_button("Submit")
 
         if submitted:
-            current_time = datetime.now()
+            if len(name) == 0:
+                st.error("Please enter your name.")
+            elif len(day_description) == 0:
+                st.error("Please enter a description of your day.")
+            elif len(user_learning) == 0:
+                st.error("Please input what you would like to learn.")
+            elif len(goals) == 0:
+                st.error("Please input your goals for tomorrow.")
+            else:
+                current_time = datetime.now()
 
-            month_day = current_time.strftime("%B %d")
-            current_year = current_time.year
+                month_day = current_time.strftime("%B %d")
+                current_year = current_time.year
 
-            print("Month Day: ", month_day)
-            print("Current Year: ", current_year)
+                input_object = {
+                    "name": name,
+                    "month_day": month_day,
+                    "current_year": current_year,
+                    'day_rating': rating,
+                    "day_description": day_description,
+                    "pov": pov,
+                    "user_learning": user_learning,
+                    # "uploaded_files": uploaded_files,
+                    "rating": rating,
+                    "goals": goals
+                }
 
-            input_object = {
-                "name": name,
-                "month_day": month_day,
-                "current_year": current_year,
-                'day_rating': rating,
-                "day_description": day_description,
-                "pov": pov,
-                "user_tasks": user_tasks,
-                "user_learning": user_learning,
-                "uploaded_files": uploaded_files,
-                "rating": rating,
-                "goals": goals
-            }
-
-            print("from: \n")
-            print(input_object)
-
-            handle_form_submission(input_object)
-            st.success("Journal page generated. Click Submit to view.")
+                handle_form_submission(input_object)
+                st.success("Journal page generated. Click Submit to view.")
 
         # if st.session_state.page != 'result':
         #     st.session_state.page = 'result'
@@ -262,9 +232,14 @@ elif st.session_state.page == 'result':
     with open('template.html', 'r') as file:
         html_content = file.read()
 
+    user_task_string = ""
+
+    for task in st.session_state.result_answers['list_tasks']:
+        user_task_string += f"<li>{task}</li>"
+
     # Replace placeholders with actual values
     html_content = html_content.replace('{{ date }}', str(st.session_state.result_answers['month_day']) + ", " + str(st.session_state.result_answers['current_year'])).replace('{{ name }}', str(st.session_state.result_answers['name'])).replace('{{ rating }}', str(st.session_state.result_answers['day_rating'])).replace(
-        '{{ reflection }}', str(st.session_state.result_answers['day_summarization'])).replace('{{ completed_tasks }}', str(st.session_state.result_answers['list_tasks'])).replace('{{ quote_of_the_day }}', str(st.session_state.result_answers['quote_of_the_day'])).replace('{{ fun_fact }}', str(st.session_state.result_answers['fun_fact'])).replace('{{ tomorrow_goals }}', str(st.session_state.result_answers['final_goals']))
+        '{{ reflection }}', str(st.session_state.result_answers['day_summarization'])).replace('{{ completed_tasks }}', user_task_string).replace('{{ quote_of_the_day }}', str(st.session_state.result_answers['quote_of_the_day'])).replace('{{ fun_fact }}', str(st.session_state.result_answers['fun_fact'])).replace('{{ tomorrow_goals }}', str(st.session_state.result_answers['final_goals']))
 
     # Render HTML with CSS in Streamlit
     st.components.v1.html(html_content, height=600, scrolling=True)
