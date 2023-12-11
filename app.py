@@ -4,6 +4,8 @@ from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain, SequentialChain
+from weasyprint import HTML, CSS
+from datetime import datetime
 import credentials
 import os
 import openai
@@ -65,7 +67,8 @@ def handle_form_submission(input_object):
 
     summarization_prompt = """
     Summarize the day that is described below in about 150 words (a paragraph). Write in the point of view
-    (either first person or second person) indicated below.
+    (either first person or second person) indicated below. Include a comment about the kind of day it was:
+    busy, peaceful, enjoyable, etc.
     Point of View: {pov}
     Description: {day_description}
     """
@@ -126,18 +129,19 @@ def handle_form_submission(input_object):
     # st.write(fun_fact)
 
     goals_prompt = """
-    Based on the goals below, come up with first a broader goal that the user is looking to accomplish,
-    and then the more small-scale tasks associated with what the user inputs. Return a JSON object with 
-    a 'Mission' field and a 'Sub-Tasks' field. Make the sub-tasks adhere mostly to the goals below.
+    Reword the goals below in a sentence in the point of view listed below. Be encouraging.
+    The first word in the sentence you output should be a verb. 
+    Point of View: {pov}
     Goals: {goals}
     """
 
     goals_template = PromptTemplate(
         template=goals_prompt,
-        input_variables=["goals"],
+        input_variables=["goals", "pov"],
     )
 
-    goals_final_prompt = goals_template.format(goals=input_object['goals'])
+    goals_final_prompt = goals_template.format(
+        goals=input_object['goals'], pov=input_object['pov'])
 
     llm = OpenAI(temperature=0.4)
     final_goals = llm(goals_final_prompt)
@@ -158,9 +162,13 @@ def handle_form_submission(input_object):
         st.write("Uploaded more than 3 images.")
 
     output_object = {
-        'quote_of_the_day': quote_of_the_day,
+        'name': input_object['name'],
+        'month_day': input_object['month_day'],
+        'current_year': input_object['current_year'],
+        'day_rating': input_object['day_rating'],
         'day_summarization': day_summarization,
         'list_tasks': list_tasks,
+        'quote_of_the_day': quote_of_the_day,
         'fun_fact': fun_fact,
         'final_goals': final_goals,
         'uploaded_files': input_object['uploaded_files'],
@@ -192,6 +200,8 @@ elif st.session_state.page == 'form':
     st.title("Your Day")
 
     with st.form("my_form"):
+        name = st.text_input(
+            "Name:")
         day_description = st.text_area("Tell me a bit about what you did today.",
                                        placeholder="Things you did, places you went, people you met, etc.")
         pov = st.radio(
@@ -211,7 +221,19 @@ elif st.session_state.page == 'form':
         submitted = st.form_submit_button("Submit")
 
         if submitted:
+            current_time = datetime.now()
+
+            month_day = current_time.strftime("%B %d")
+            current_year = current_time.year
+
+            print("Month Day: ", month_day)
+            print("Current Year: ", current_year)
+
             input_object = {
+                "name": name,
+                "month_day": month_day,
+                "current_year": current_year,
+                'day_rating': rating,
                 "day_description": day_description,
                 "pov": pov,
                 "user_tasks": user_tasks,
@@ -224,14 +246,34 @@ elif st.session_state.page == 'form':
             print("from: \n")
             print(input_object)
 
+            # HTML('<h1>foo') would be filename
+            html = HTML(string='''
+                <h1>The title</h1>
+                <p>Content goes here
+            ''')
+            css = CSS(string='@page { size: A3; margin: 1cm }')
+
+            html.write_pdf(
+                'example.pdf', stylesheets=[css])
+
             handle_form_submission(input_object)
+            st.success("Journal page generated. Click Submit to view.")
 
         # if st.session_state.page != 'result':
         #     st.session_state.page = 'result'
 
 # Display the result page
 elif st.session_state.page == 'result':
-    st.write("result")
+    st.title("Enjoy!")
+    st.write('Your personalized journal entry is available for download below.')
+    with open("example.pdf", "rb") as file:
+        st.download_button(
+            label="Download Journal Entry",
+            data=file,
+            file_name="journal_entry.pdf",
+            mime="application/octet-stream",
+            type="secondary"
+        )
     if st.session_state.result_answers:
         st.write(st.session_state.result_answers)
     st.button("Back", on_click=go_to_form)
