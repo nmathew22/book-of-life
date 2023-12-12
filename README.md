@@ -2,7 +2,7 @@
 Final project for MGT 802. Low-effort journal using generative AI. By Neil Mathew.
 
 ## About
-So much of our lives go forgotten. We rarely remember that peaceful park walk or that time listening to a nostalgic song a few weeks ago. Journaling offers a solution, but demands both time and effort. The Book of Life app helps people make journal entries in seconds by generating a PDF for them based on a few key responses. 
+So many moments of our lives go forgotten. We rarely remember that peaceful park walk or that time listening to a nostalgic song a few weeks ago. Journaling offers a solution, but demands both time and effort. The Book of Life app helps people make journal entries in seconds by generating a PDF for them based on a few key responses. 
 
 ## Installation
 Download this Github repository and create a file called "credentials.py" in the repo with a field called OPENAI_API_KEY. Insert your api key for Open AI as a string here. To run the program, install the Python packages listed below in your environment and then execute "streamlit run app.py" in the terminal.
