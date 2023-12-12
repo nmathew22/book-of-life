@@ -4,15 +4,11 @@ from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain, SequentialChain
-from langchain.document_loaders import ImageCaptionLoader
-from langchain.indexes import VectorstoreIndexCreator
-from weasyprint import HTML, CSS
+from weasyprint import HTML
 from datetime import datetime
-from PIL import Image
 import credentials
 import os
 import openai
-import textwrap
 
 # Setting API keys
 openai.api_key = credentials.OPENAI_API_KEY
@@ -28,18 +24,16 @@ if 'result_answers' not in st.session_state:
     st.session_state.result_answers = ''
 
 
-def go_to_form():
+def go_to_form():  # Navigates to form page
     st.session_state.page = 'form'
 
 
-def go_to_result():
+def go_to_result():  # Navigates to result page
     st.session_state.page = 'result'
 
 
+# Defines prompts for how answers should be generated based on form
 def handle_form_submission(input_object):
-    # # Access form variables from session state
-    # input_object = st.session_state
-
     quote_prompt = """
     Give me a famous quote from a famous figure which relates directly to the description below. It
     should ideally be a piece of wisdom or inspiration. It should preferably not be from an anonymous figure.
@@ -81,7 +75,8 @@ def handle_form_submission(input_object):
     Extract what tasks the user completed based on the description of his day below. The tasks should be 
     career/academic oriented and related to work in some sense. For example, going to dinner would not be 
     a task you should include. If the task list is empty, don't output anything. The tasks should be relatively 
-    short. Each task should start with a verb in the past tense, to indicate that the task was completed.
+    short. Each task should start with a verb in the past tense, to indicate that the task was completed. The output
+    should be a comma separated list of tasks, where each task starts with a capital letter. Don't include a period at the end.
     Day: {day_description}
     """
 
@@ -115,7 +110,8 @@ def handle_form_submission(input_object):
 
     goals_prompt = """
     Reword the goals below in a sentence in the point of view listed below. Be encouraging.
-    The first word in the sentence you output should be a verb. 
+    The first word in the sentence you output should be a verb. Include some advice about 
+    how to achieve the goal in one or two more sentences as well.
     Point of View: {pov}
     Goals: {goals}
     """
@@ -131,6 +127,7 @@ def handle_form_submission(input_object):
     llm = OpenAI(temperature=0.4)
     final_goals = llm(goals_final_prompt)
 
+    # Save generated outputs for the session so they can still be accessed in result page
     output_object = {
         'name': input_object['name'],
         'month_day': input_object['month_day'],
@@ -141,7 +138,6 @@ def handle_form_submission(input_object):
         'quote_of_the_day': quote_of_the_day,
         'fun_fact': fun_fact,
         'final_goals': final_goals,
-        # 'uploaded_files': input_object['uploaded_files'],
     }
 
     st.session_state.result_answers = output_object
@@ -150,26 +146,25 @@ def handle_form_submission(input_object):
 
 # Display the welcome page
 if st.session_state.page == 'welcome':
-    # Create two columns
     col1, col2 = st.columns(2)
 
-    # Use the first column to display content
+    # Design structure for home page
     with col1:
         st.title("Book of Life")
         st.write(
             'Welcome to Book of Life. Use the power of generative AI to craft high-quality journal entries in seconds.')
         st.button('Start', on_click=go_to_form)
 
-    # Use the second column to display content
+    # Logo created with DALLE
     with col2:
         st.image("img/DALLE-logo.png")
 
 
 # Display the form page
 elif st.session_state.page == 'form':
-    max_photos = 3
     st.title("Your Day")
 
+    # Define questions in form
     with st.form("my_form"):
         name = st.text_input(
             "Name:")
@@ -189,6 +184,7 @@ elif st.session_state.page == 'form':
 
         submitted = st.form_submit_button("Submit")
 
+        # Complete form validation (ensure fields are nonempty)
         if submitted:
             if len(name) == 0:
                 st.error("Please enter your name.")
@@ -212,7 +208,6 @@ elif st.session_state.page == 'form':
                     "day_description": day_description,
                     "pov": pov,
                     "user_learning": user_learning,
-                    # "uploaded_files": uploaded_files,
                     "rating": rating,
                     "goals": goals
                 }
@@ -220,38 +215,34 @@ elif st.session_state.page == 'form':
                 handle_form_submission(input_object)
                 st.success("Journal page generated. Click Submit to view.")
 
-        # if st.session_state.page != 'result':
-        #     st.session_state.page = 'result'
-
 # Display the result page
 elif st.session_state.page == 'result':
     st.title("Enjoy!")
     st.write('Your personalized journal entry is available for download below.')
 
-    # Read HTML file
+    # Read template HTML file
     with open('template.html', 'r') as file:
         html_content = file.read()
 
     user_task_string = ""
 
+    # Writes HTML unordered list for all tasks
     for task in st.session_state.result_answers['list_tasks']:
         user_task_string += f"<li>{task}</li>"
 
-    # Replace placeholders with actual values
+    # Replace placeholders with actual generated values from LLMs
     html_content = html_content.replace('{{ date }}', str(st.session_state.result_answers['month_day']) + ", " + str(st.session_state.result_answers['current_year'])).replace('{{ name }}', str(st.session_state.result_answers['name'])).replace('{{ rating }}', str(st.session_state.result_answers['day_rating'])).replace(
         '{{ reflection }}', str(st.session_state.result_answers['day_summarization'])).replace('{{ completed_tasks }}', user_task_string).replace('{{ quote_of_the_day }}', str(st.session_state.result_answers['quote_of_the_day'])).replace('{{ fun_fact }}', str(st.session_state.result_answers['fun_fact'])).replace('{{ tomorrow_goals }}', str(st.session_state.result_answers['final_goals']))
 
-    # Render HTML with CSS in Streamlit
-    st.components.v1.html(html_content, height=600, scrolling=True)
-
     html = HTML(string=html_content)
 
-    # Write HTML content to a file
+    # Write HTML content to a file for logging purposes
     with open('output.html', 'w') as file:
         file.write(html_content)
 
     html.write_pdf('journal.pdf')
 
+    # Allow user to save PDF
     with open("journal.pdf", "rb") as file:
         st.download_button(
             label="Download Entry",
@@ -259,5 +250,8 @@ elif st.session_state.page == 'result':
             file_name="journal_entry.pdf",
             mime="application/octet-stream"
         )
+
+    # Render HTML with CSS in Streamlit
+    st.components.v1.html(html_content, height=600, scrolling=True)
 
     st.button("Back", on_click=go_to_form)
